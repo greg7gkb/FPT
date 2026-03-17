@@ -3,8 +3,8 @@
 vec3 cam_pos = vec3(0.0,0.0,-5);
 int ni = 212;
 float lod_falloff = 1000.;
-float pi = 3.14159265359;
-float inf = 1e20;
+const float pi = 3.14159265359;
+const float inf = 1e20;
 
 
 
@@ -106,20 +106,45 @@ float Smin( float a, float b, float k ){
 
 
 vec3 Studio(vec3 dr,vec3 li, float light_size){
-    float ligth = max( (dot(dr, li) - 1.)/(1 - cos(light_size)) + 1, 0.0) / light_size * 3.;
+    float ligth = max( (dot(dr, li) - 1.)/(1. - cos(light_size)) + 1., 0.0) / light_size * 3.;
     return ligth * vec3(1.0,1.0,1.0);
 }
 
-vec3 Skybox(vec3 viewDir, vec3 li){
-    viewDir = normalize(viewDir);
-    float t = pow(2., viewDir.y)/2.; 
-    vec3 horizonColor = mix(vec3(0.8, 0.9, 1.0), vec3(0.004, 0.048, 0.253), 0.5);
-    vec3 zenithColor  = vec3(0.004, 0.048, 0.253);
-    vec3 sky = mix(horizonColor, zenithColor, t);
-    // Sun
-    float sun = max(dot(viewDir, li), 0.0);
-    sky += vec3(1.0, 1.0, 0.8) * pow(sun, 64.) * 20.;
-    return sky;
+float Preetham(vec3 dr, vec3 sunDir){
+    float T = 2.0;
+
+    float A =  0.1787*T - 1.4630;
+    float B = -0.3554*T + 0.4275;
+    float C = -0.0227*T + 5.3251;
+    float D =  0.1206*T - 2.5771;
+    float E = -0.0670*T + 0.3703;
+
+    float theta = acos(clamp(dr.y, -1.0, 1.0));
+    float gamma = acos(clamp(dot(dr, sunDir), -1.0, 1.0));
+
+    float term1 = 1.0 + A * exp(B / max(0.1, cos(theta)));
+    float term2 = 1.0 + C * exp(D * gamma) + E * pow(cos(gamma),2.0);
+
+    return term1 * term2;
+}
+
+vec3 Sky(vec3 dr, vec3 sunDir){
+    float sky = Preetham(dr,sunDir);
+    
+    vec3 col = mix(vec3(0.004, 0.048, 0.253),
+               vec3(0.8, 0.9, 1.0),
+               sky); 
+   
+    float height_dr = (dr.y+1.)/2.;
+    float height_sunDirr = (sunDir.y+1.)/2.;          
+    
+    col = mix(vec3(1.0,0.85,0.53)/4.,col * 1.2,height_dr) * height_sunDirr;
+    col = (col-0.5)*1.2+0.5;
+    float light_size = 0.05;
+    float sun_disk = max( (dot(dr, sunDir) - 1.)/(1. - cos(light_size)) + 1., 0.0);
+    sun_disk *= pow(height_dr,10.);
+               
+    return col * 0.8 + sun_disk*100.;
 }
 
 vec3 sample_HDRI(vec3 dir){
@@ -138,7 +163,7 @@ vec3 Environment(vec3 viewDir){
 	vec3 hdri_dir = Rotate( viewDir,vec2(World_settings[2] * pi/180. ,0.0));
 
     if (World_settings[0] == 0.){env = Studio(viewDir, ligth_dir, World_settings[1]); };
-    if (World_settings[0] == 1.){env = Skybox(viewDir, ligth_dir); };
+    if (World_settings[0] == 1.){env = Sky(viewDir, ligth_dir); };
     if (World_settings[0] == 2.){env = sample_HDRI(hdri_dir); };
 	
 	//Contrast
@@ -214,13 +239,14 @@ Material Material_properties(vec3 rp){
 BRDFResult BRDF(
     vec3 dr, 
     vec3 rp,
-    vec3 n,  
     float frame, 
     int i, 
     vec2 xy
 ){
     Material material = Material_properties(rp);
     vec3 color = material.rgb;
+
+	vec3 n = Normal(rp);
 
     //fresnel
     float ior = material.ior;
@@ -259,7 +285,7 @@ BRDFResult BRDF(
 vec3 Render(vec2 xy, vec3 rp,vec2 cam_yp, float frame){
     float focal_length = 1/tan(Render_settings[3]/2. * pi/180. );
 
-    float cam_d = length(Ray(Rotate( vec3(0.0,0.0,1.0), cam_yp), rp, 50) - rp);
+    float cam_d = length(Ray(Rotate( vec3(iFocus_pos, focal_length), cam_yp), rp, 50) - rp);
 
     vec3 dr = normalize(vec3(xy, focal_length)) + Random_point(0.0002, xy, frame);
     dr = Rotate(dr, cam_yp);
@@ -284,20 +310,16 @@ vec3 Render(vec2 xy, vec3 rp,vec2 cam_yp, float frame){
 		//light------------light
         if (length(rp - cam_pos) > Render_settings[5]){
             pixellight += Environment(dr);
-            break;
-        }
+            break;}
+
         if (material.emission > 0.01){
             pixellight += material.rgb * material.emission;
-            break;
-        }
-
-        vec3 n = Normal(rp);
+            break;}
    
-        BRDFResult brdf = BRDF(dr, rp, n, frame, i, xy);
+        BRDFResult brdf = BRDF(dr, rp, frame, i, xy);
         rp = brdf.rp;
         dr = brdf.dr;
         pixelcolor *= brdf.color;
-        
     }    
     return pixellight * pixelcolor;
 }

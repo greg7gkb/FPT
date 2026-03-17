@@ -61,7 +61,8 @@ class fractal_Path_tracer(mglw.WindowConfig):
         self.cos_p = math.cos(self.iCam_yp[1])
         self.sin_y = math.sin(self.iCam_yp[0])
         self.cos_y = math.cos(self.iCam_yp[0])
-
+        
+        self.Mouse_event = False
 
         self.ui_render_width, self.ui_render_height = self.wnd.size
         self.pending_resize = None
@@ -251,6 +252,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
         uniform vec2 iCam_yp;
         uniform float iCam_a;
         uniform int iMode;
+        uniform vec2 iFocus_pos;
         
         uniform sampler2D iPrevFrame;
         uniform sampler2D HDRI;
@@ -411,20 +413,36 @@ class fractal_Path_tracer(mglw.WindowConfig):
         }
     
         dpg.set_global_font_scale(scale_map[app_data])
-    
 
-        
-        
-        
         
     def on_key_event(self, key, action, modifiers):
         keys = self.wnd.keys
         if action == keys.ACTION_PRESS:
             self.keys_down.add(key)
         elif action == keys.ACTION_RELEASE:
-            self.keys_down.discard(key)            
+            self.keys_down.discard(key)
             
-
+    def on_mouse_press_event(self, x, y, button):
+        w = self.wnd.buffer_width
+        h = self.wnd.buffer_height
+        x /= w
+        y /= h
+        x -= 0.5
+        y -= 0.5
+        x *= w/h
+        if button == 1:
+            self.frame = 0
+            if "iFocus_pos" in self.program:
+                self.program["iFocus_pos"].value = tuple([x,-y])
+                
+    def on_mouse_scroll_event(self, x_offset: float, y_offset: float):
+        if y_offset > 0. and not self.iCam_a >= 0.2:
+            self.frame = 0
+            self.iCam_a += y_offset / 500.
+        if y_offset < 0. and not self.iCam_a <= 0.:
+            self.frame = 0
+            self.iCam_a += y_offset / 500.
+        
 
     #UI---------------------------------------------------------------------------------------------------------------UI
 
@@ -454,8 +472,9 @@ class fractal_Path_tracer(mglw.WindowConfig):
                 " WASD / QE : Move camera\n"
                 " Arrow keys : Rotate camera\n"
                 " R : Toggle render / preview\n"
-                " Ctrl + A / D : Depth of field\n"
+                " Scroll to change the depth of field\n"
                 " Ctrl + S : Save render\n"
+                " Click where you want the focus the camera\n"
                 " Shift : go faster! \n"
                 " Shift + Space : go even faster!! \n"
                 "\n"
@@ -490,7 +509,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
             
                 with dpg.table_row():
                     dpg.add_button(
-                        label="?",
+                        label=" ? ",
                         callback=lambda: dpg.configure_item("help_popup", show=True)
                     )
             
@@ -807,7 +826,6 @@ class fractal_Path_tracer(mglw.WindowConfig):
         dpg.show_viewport()
 
         #UI---------------------------------------------------------------------------------------------------------------UI
-
     def on_render(self, time: float, frame_time: float):
         
         if self.pending_hdri is not None:
@@ -864,7 +882,6 @@ class fractal_Path_tracer(mglw.WindowConfig):
                 dpg.set_value(self.sdf_compile_log, f":( Compile error:\n{e}")
                 
         #--------------------------------------------
-
         keys = self.wnd.keys
         just_pressed = self.keys_down - self.prev_keys
         self.prev_keys = set(self.keys_down)
@@ -878,25 +895,23 @@ class fractal_Path_tracer(mglw.WindowConfig):
             else:
                 self.iMode = 1
 
-
-        #camera settings------------------------------------------------------------------------------------------------
-        speed_a = self.cam_speed * frame_time * 0.01
-        self.iCam_a = max(0.0, min(1.0, self.iCam_a))
-        if keys.LEFT_CTRL in self.keys_down:
-
-            if (keys.A in self.keys_down
-                    and self.iCam_a <= 0.5):
-                self.frame = 0
-                self.iCam_a -= 1 * speed_a
-            if (keys.D in self.keys_down
-                    and self.iCam_a >= 0):
-                self.frame = 0
-                self.iCam_a += 1 * speed_a
-
-
+        #camera-------------
+        if self.iCam_a > 0.2:
+            self.iCam_a = 0.2
+        if self.iCam_a < 0.0:
+            self.iCam_a = 0.0
         #rotation-------------------------------------------------------------------------------------------------------
         if not keys.LEFT_CTRL in self.keys_down:
             speed_yp = self.cam_speed * frame_time * 0.5
+            
+            if keys.LEFT_SHIFT in self.keys_down:
+                speed_yp *= 1.125
+    
+            if (keys.SPACE in self.keys_down
+                    and keys.LEFT_SHIFT in self.keys_down):
+                speed_yp *= 1.25
+            
+            
             if keys.LEFT in self.keys_down:
                 self.iCam_yp[0] -= speed_yp
             if keys.RIGHT in self.keys_down:
@@ -920,10 +935,10 @@ class fractal_Path_tracer(mglw.WindowConfig):
         #movement-------------------------------------------------------------------------------------------------------
         if not keys.LEFT_CTRL in self.keys_down:
 
-            speed_pos = self.cam_speed * frame_time
+            speed_pos = self.cam_speed * frame_time * 0.25
             
-            if keys.LEFT_SHIFT not in self.keys_down:
-                speed_pos *= 0.25
+            if keys.LEFT_SHIFT in self.keys_down:
+                speed_pos *= 5
                 
             if (keys.SPACE in self.keys_down
             and keys.LEFT_SHIFT in self.keys_down):
@@ -976,11 +991,11 @@ class fractal_Path_tracer(mglw.WindowConfig):
         if "iCam_Pos" in self.program:
             self.program["iCam_Pos"].value = tuple(self.iCam_pos)
         if "iCam_yp" in self.program:
-            self.program["iCam_yp"].value = tuple(self.iCam_yp)
+            self.program["iCam_yp"].value = tuple(self.iCam_yp) 
         if "iMode" in self.program:
             self.program["iMode"].value = self.iMode
         if "iCam_a" in self.program:
-            self.program["iCam_a"].value = self.iCam_a
+            self.program["iCam_a"].value = self.iCam_a   
 
         if "World_settings" in self.program:
             self.program["World_settings"].value = tuple(float(x) for x in self.World_settings)
