@@ -224,8 +224,11 @@ class fractal_Path_tracer(mglw.WindowConfig):
         image = Image.frombytes("RGB", (w, h), data)
         image = image.transpose(Image.FLIP_TOP_BOTTOM)
 
-        existing = sorted(Path(".").glob("Render*.png"))
-        
+        save_dir = Path.home() / "Downloads"
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        existing = sorted(save_dir.glob("Render*.png"))
+
         if existing:
             numbers = [
                 int(m.group(1))
@@ -235,8 +238,8 @@ class fractal_Path_tracer(mglw.WindowConfig):
             number = max(numbers) + 1 if numbers else 1
         else:
             number = 1
-        
-        filename = Path(f"Render{number:03d}.png")
+
+        filename = save_dir / f"Render{number:03d}.png"
         image.save(filename)
 
 
