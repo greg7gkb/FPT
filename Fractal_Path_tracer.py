@@ -26,7 +26,7 @@ def vrotate_p(v, sin_p, cos_p, sin_y, cos_y):
     return (x3, y2, z3)
     
 class fractal_Path_tracer(mglw.WindowConfig):
-    gl_version = (4, 3)
+    gl_version = (4, 1)
     title = "Fractal Path tracer"
     window_size = (1920 , 1080)
     aspect_ratio = None
@@ -108,7 +108,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
 
         post_code = resource_path("PostProcess.glsl").read_text()
         self.vertex_shader_source = """
-        #version 430 core
+        #version 410 core
         in vec2 in_position;
         void main() {
             gl_Position = vec4(in_position, 0.0, 1.0);
@@ -121,7 +121,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
         )
 
         post_fragment_shader = f"""
-        #version 430 core
+        #version 410 core
         out vec4 fragColor;
         
         uniform sampler2D uAccum;
@@ -274,7 +274,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
 
 
         return f"""
-        #version 430 core
+        #version 410 core
         out vec4 fragColor;
     
         uniform vec3 iResolution;
