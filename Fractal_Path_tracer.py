@@ -157,7 +157,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
             vertex_shader=self.vertex_shader_source,
             fragment_shader=post_fragment_shader,
         )
-        self.hdri_tex = self.ctx.texture((1, 1), 3, b"\xff\xff\xff")
+        self.hdri_tex = self.ctx.texture((1, 1), 4, b"\xff\xff\xff\xff")
         self.hdri_tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
         self.hdri_tex.use(location=1)
 
@@ -419,11 +419,16 @@ class fractal_Path_tracer(mglw.WindowConfig):
         img = imageio.imread(path)
         if img.ndim == 2:
             img = np.stack([img, img, img], axis=-1)
-        if img.shape[2] > 3:
-            img = img[:, :, :3]
         if img.dtype != np.uint8:
             img = np.clip(img, 0, 1)
             img = (img * 255).astype(np.uint8)
+        if img.ndim == 2 or img.shape[2] == 1:
+            img = np.stack([img[..., 0]] * 3 + [np.full(img.shape[:2], 255, np.uint8)], axis=-1)
+        elif img.shape[2] == 3:
+            alpha = np.full((*img.shape[:2], 1), 255, dtype=np.uint8)
+            img = np.concatenate([img, alpha], axis=-1)
+        else:
+            img = img[:, :, :4]
         h, w, _ = img.shape
         data = img.tobytes()
 
@@ -911,7 +916,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
             old_tex = self.hdri_tex
             self.hdri_tex = self.ctx.texture(
                 (w, h),
-                3,
+                4,
                 data,
                 alignment=1
             )
