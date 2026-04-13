@@ -17,6 +17,12 @@ def resource_path(relative_path: str) -> Path:
         base_path = Path(__file__).parent
     return base_path / relative_path
 
+def set_uniform_array(prog, name, values):
+    if name not in prog:
+        return
+    length = prog[name].array_length
+    prog[name].value = tuple(float(v) for v in values[:length])
+
 def vrotate_p(v, sin_p, cos_p, sin_y, cos_y):
     x, y, z = v
     y2 = z * sin_p + y * cos_p
@@ -206,7 +212,7 @@ class fractal_Path_tracer(mglw.WindowConfig):
             if "iResolution" in self.post_program:
                 self.post_program["iResolution"].value = (float(w), float(h), 1.0)
 
-            self.post_program["Post_settings"].value = tuple(float(x) for x in self.Post_settings)
+            set_uniform_array(self.post_program, "Post_settings", self.Post_settings)
     
             self.quad.render(self.post_program)
     
@@ -1051,16 +1057,11 @@ class fractal_Path_tracer(mglw.WindowConfig):
         if "iMode" in self.program:
             self.program["iMode"].value = self.iMode
             
-        if "Camera_settings" in self.program:
-            self.program["Camera_settings"].value = tuple(float(x) for x in self.Camera_settings)
-        if "World_settings" in self.program:
-            self.program["World_settings"].value = tuple(float(x) for x in self.World_settings)
-        if "SET" in self.program:
-            self.program["SET"].value = tuple(float(x) for x in self.SET)
-        if "Render_settings" in self.program:
-            self.program["Render_settings"].value = tuple(float(x) for x in self.Render_settings)
-        if "Post_settings" in self.post_program:
-            self.post_program["Post_settings"].value = tuple(float(x) for x in self.Post_settings)
+        set_uniform_array(self.program, "Camera_settings", self.Camera_settings)
+        set_uniform_array(self.program, "World_settings", self.World_settings)
+        set_uniform_array(self.program, "SET", self.SET)
+        set_uniform_array(self.program, "Render_settings", self.Render_settings)
+        set_uniform_array(self.post_program, "Post_settings", self.Post_settings)
 
         w = self.wnd.buffer_width
         h = self.wnd.buffer_height
@@ -1093,7 +1094,8 @@ class fractal_Path_tracer(mglw.WindowConfig):
         if self.iMode == 0:
             self.ctx.screen.use()
             self.ctx.viewport = (0, 0, w, h)
-            self.program["iFrame"].value = 0
+            if "iFrame" in self.program:
+                self.program["iFrame"].value = 0
             self.quad.render(self.program)
 
         else:
