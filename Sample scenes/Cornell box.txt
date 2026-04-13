@@ -7,7 +7,6 @@ material.rgb = vec3(1.0, 0.0, 0.8);
 material.roughness = 1.0;
 material.specular = 0.0;
 material.ior = 1.5;
-material.specularRoughness = 0.0;
 material.emission = 0.0;
 
 //c1
@@ -42,7 +41,6 @@ material.rgb = vec3(1.0);
 material.roughness = 1.0;
 material.specular = 1.0;
 material.ior = 1.5;
-material.specularRoughness = 0.0;
 material.emission = 0.0;
 }
 sdf = min(s1,sdf);
