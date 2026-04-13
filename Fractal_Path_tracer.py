@@ -1095,10 +1095,18 @@ class fractal_Path_tracer(mglw.WindowConfig):
             self.fbos[self.pong].use()
             self.ctx.clear(0.0, 0.0, 0.0, 0.0)
 
+        #ui render---------------------
+        if self.target_fps > 70 or self._last_fps < 60:
+            if self.frame % 3 == 0:   # 60Hz UI
+                dpg.render_dearpygui_frame()
+        else:
+            dpg.render_dearpygui_frame()
+
+        # Restore moderngl context after DearPyGui, which switches GL contexts
+        self.ctx.screen.use()
+        self.ctx.viewport = (0, 0, w, h)
 
         if self.iMode == 0:
-            self.ctx.screen.use()
-            self.ctx.viewport = (0, 0, w, h)
             if "iFrame" in self.program:
                 self.program["iFrame"].value = 0
             self.quad.render(self.program)
@@ -1109,7 +1117,6 @@ class fractal_Path_tracer(mglw.WindowConfig):
                 self.accum_textures[self.ping].use(location=0)
                 if "iPrevFrame" in self.program:
                     self.program["iPrevFrame"].value = 0
-
 
             self.fbos[self.pong].use()
             self.ctx.viewport = (0, 0, w, h)
@@ -1130,10 +1137,8 @@ class fractal_Path_tracer(mglw.WindowConfig):
 
             self.quad.render(self.post_program)
 
-
-
         self.wnd.title = (f"FPT | FPS: {self._last_fps:.1f} | Depth of field strength: {self.Camera_settings[1]:.3f} |")
- 
+
         if (
                 keys.S in just_pressed
                 and keys.LEFT_CTRL in self.keys_down
@@ -1142,13 +1147,6 @@ class fractal_Path_tracer(mglw.WindowConfig):
         if self.request_save_render:
             self.save_screenshot()
             self.request_save_render = False
-
-        #ui render---------------------
-        if self.target_fps > 70 or self._last_fps < 60:
-            if self.frame % 3 == 0:   # 60Hz UI
-                dpg.render_dearpygui_frame()
-        else:
-            dpg.render_dearpygui_frame()
         
         #fps cap---------------------
         frame_time_target = 1.0 / self.target_fps
