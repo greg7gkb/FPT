@@ -1,8 +1,33 @@
 # FPT - Fractal Path Tracer
-FPT is a free sdf path tracer!
+FPT is a free SDF path tracer!
 If you have any suggestions would love to hear them!
 Also if you make any cool renders pls send them, I love seeing my program in use ;) 
 My insta: https://www.instagram.com/adamp.art/
+
+## Requirements
+- Python 3
+- OpenGL 4.1+ capable GPU
+
+## Setup & Run
+
+**Without a virtual environment:**
+```bash
+pip install moderngl moderngl-window Pillow dearpygui numpy
+python Fractal_Path_tracer.py
+```
+
+**With a virtual environment (recommended):**
+```bash
+python -m venv venv
+source venv/bin/activate        # macOS/Linux
+# venv\Scripts\activate         # Windows
+pip install moderngl moderngl-window Pillow dearpygui numpy
+python Fractal_Path_tracer.py
+```
+
+## Sample Scenes
+The `Sample scenes/` directory contains `.txt` files with pre-built fractal scenes. Load them from within the app to explore examples.
+
 --------
 ![Render005](https://github.com/user-attachments/assets/64d05615-bc69-4160-a27d-92a1a1b1ac41)
 <img width="1920" height="1080" alt="Render_14" src="https://github.com/user-attachments/assets/d1caa0c9-73d1-4c21-aba8-faee8d2d6639" />
